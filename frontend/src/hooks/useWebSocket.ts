@@ -1,4 +1,4 @@
-dimport { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { DisasterEvent, WSMessage, WSSubscribePayload } from '@/types';
 import { useAppStore } from '@/store';
 

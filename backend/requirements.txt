@@ -9,7 +9,8 @@ slowapi==0.1.9
 python-multipart==0.0.9
 pytest==8.2.0
 pytest-asyncio==0.23.6
-
+pycountry>=24.0.0
+reverse_geocoder>=1.5.1
 python-jose[cryptography]==3.5.0
 bcrypt==4.2.1
 email-validator==2.1.1
