@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: disaster
+      POSTGRES_PASSWORD: disaster_secret
+      POSTGRES_DB: disaster_monitor
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U disaster"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://disaster:disaster_secret@postgres:5432/disaster_monitor
+      SECRET_KEY: local_dev_secret_change_in_prod
+      ALLOWED_ORIGINS: '["http://localhost:3000"]'
+      DEBUG: "true"
+      ENVIRONMENT: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app  # Hot reload in dev
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+volumes:
+  pgdata:
