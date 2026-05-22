@@ -52,12 +52,12 @@ export function Navbar() {
             title="Toggle Sidebar">
             ☰
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-2 mb-2">
              <Image
               src="/logo.png"
               alt="GeoSentinel logo"
               width={110}
-              height={90}
+              height={60}
               className="rounded-sm"
               priority
             />

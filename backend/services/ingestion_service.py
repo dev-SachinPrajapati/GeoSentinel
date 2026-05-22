@@ -74,6 +74,13 @@ def _get_location_info(lat: float, lon: float) -> tuple[str | None, str | None, 
     return _geocode_cached(round(lat, 1), round(lon, 1))
 
 
+def _extract_country(place: Optional[str]) -> Optional[str]:
+    if not place:
+        return None
+    parts = place.split(",")
+    return parts[-1].strip() if parts else None
+
+
 # ── datetime helper ───────────────────────────────────────────────────────────
 
 def _parse_dt_safe(s: str, fallback: datetime) -> datetime:
@@ -716,14 +723,21 @@ async def ingest_and_broadcast(events: list[DisasterEventCreate]) -> None:
         saved = 0
         for ev in events:
             try:
+                is_new = True
+                if ev.external_id:
+                    existing = await service._get_by_external_id(ev.external_id)
+                    if existing:
+                        is_new = False
+                
                 record  = await service.create_event(ev)
-                lat     = float(record.latitude)   # type: ignore[arg-type]
-                lon     = float(record.longitude)  # type: ignore[arg-type]
-                from schemas.disaster import DisasterEventRead
-                payload = DisasterEventRead.model_validate(record).model_dump(mode="json")
-                await manager.broadcast_event(payload)
-                await manager.send_proximity_alerts(payload, lat, lon)
-                saved += 1
+                if is_new:
+                    lat     = float(record.latitude)   # type: ignore[arg-type]
+                    lon     = float(record.longitude)  # type: ignore[arg-type]
+                    from schemas.disaster import DisasterEventRead
+                    payload = DisasterEventRead.model_validate(record).model_dump(mode="json")
+                    await manager.broadcast_event(payload)
+                    await manager.send_proximity_alerts(payload, lat, lon)
+                    saved += 1
             except Exception as exc:
                 logger.error(f"[ingest] '{ev.title}': {exc}")
         logger.info(f"[ingest] saved {saved}/{len(events)}")

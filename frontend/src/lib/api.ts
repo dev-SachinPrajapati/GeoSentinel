@@ -29,9 +29,11 @@ export function buildDisasterParams(filters: Partial<DisasterFilters>, limit = 5
     filters.severities.forEach((s) => params.append('severities', s));
   }
   if (filters.country) params.set('country', filters.country);
-  if (filters.radiusKm) params.set('radius_km', filters.radiusKm.toString());
-  if (filters.centerLat != null) params.set('center_lat', filters.centerLat.toString());
-  if (filters.centerLon != null) params.set('center_lon', filters.centerLon.toString());
+  if (filters.radiusKm != null && filters.centerLat != null && filters.centerLon != null) {
+    params.set('radius_km', filters.radiusKm.toString());
+    params.set('center_lat', filters.centerLat.toString());
+    params.set('center_lon', filters.centerLon.toString());
+  }
   if (filters.fromDt) params.set('from_dt', filters.fromDt);
   if (filters.toDt) params.set('to_dt', filters.toDt);
 

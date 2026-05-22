@@ -33,7 +33,62 @@ export default function DashboardPage() {
 
   const { data: eventsData, error: eventsError, isLoading: eventsLoading } = useQuery({
     queryKey: ['disasters', filters],
-    queryFn:  () => fetchDisasters(filters),
+    queryFn:  async () => {
+      const res = await fetchDisasters(filters);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('cache_disasters_' + JSON.stringify(filters), JSON.stringify(res));
+        } catch (e) {
+          console.warn('[sessionStorage] error writing cache:', e);
+        }
+      }
+      return res;
+    },
+    initialData: () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = sessionStorage.getItem('cache_disasters_' + JSON.stringify(filters));
+          return cached ? JSON.parse(cached) : undefined;
+        } catch (e) {
+          return undefined;
+        }
+      }
+      return undefined;
+    },
+    refetchInterval: 30_000,
+    retry:    3,
+    staleTime: 15_000,
+  });
+
+  const timelineFilters = useMemo(() => {
+    const { fromDt, toDt, ...rest } = filters;
+    return rest;
+  }, [filters]);
+
+  const { data: unfilteredEventsData } = useQuery({
+    queryKey: ['disasters', timelineFilters],
+    queryFn:  async () => {
+      const res = await fetchDisasters(timelineFilters);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('cache_unfiltered_' + JSON.stringify(timelineFilters), JSON.stringify(res));
+        } catch (e) {
+          console.warn('[sessionStorage] error writing cache:', e);
+        }
+      }
+      return res;
+    },
+    initialData: () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = sessionStorage.getItem('cache_unfiltered_' + JSON.stringify(timelineFilters));
+          return cached ? JSON.parse(cached) : undefined;
+        } catch (e) {
+          return undefined;
+        }
+      }
+      return undefined;
+    },
     refetchInterval: 30_000,
     retry:    3,
     staleTime: 15_000,
@@ -41,7 +96,28 @@ export default function DashboardPage() {
 
   const { data: stats } = useQuery({
     queryKey: ['stats'],
-    queryFn:  fetchStats,
+    queryFn:  async () => {
+      const res = await fetchStats();
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('cache_stats', JSON.stringify(res));
+        } catch (e) {
+          console.warn('[sessionStorage] error writing cache:', e);
+        }
+      }
+      return res;
+    },
+    initialData: () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = sessionStorage.getItem('cache_stats');
+          return cached ? JSON.parse(cached) : undefined;
+        } catch (e) {
+          return undefined;
+        }
+      }
+      return undefined;
+    },
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
@@ -53,7 +129,28 @@ export default function DashboardPage() {
   };
   const { data: heatmapData } = useQuery({
     queryKey: ['heatmap', heatmapFilters],
-    queryFn:  () => fetchHeatmap(heatmapFilters),
+    queryFn:  async () => {
+      const res = await fetchHeatmap(heatmapFilters);
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem('cache_heatmap_' + JSON.stringify(heatmapFilters), JSON.stringify(res));
+        } catch (e) {
+          console.warn('[sessionStorage] error writing cache:', e);
+        }
+      }
+      return res;
+    },
+    initialData: () => {
+      if (typeof window !== 'undefined') {
+        try {
+          const cached = sessionStorage.getItem('cache_heatmap_' + JSON.stringify(heatmapFilters));
+          return cached ? JSON.parse(cached) : undefined;
+        } catch (e) {
+          return undefined;
+        }
+      }
+      return undefined;
+    },
     staleTime: 60_000,
   });
 
@@ -62,18 +159,19 @@ export default function DashboardPage() {
   const events        = eventsData?.data  ?? [];
   const totalEvents   = eventsData?.total ?? 0;
   const heatmapPoints = heatmapData?.data ?? [];
+  const unfilteredEvents = unfilteredEventsData?.data ?? [];
 
   const timelineDates = useMemo(() => {
-    if (!events.length) {
+    if (!unfilteredEvents.length) {
       const now = new Date().toISOString();
       return { min: now, max: now };
     }
-    const ts = events.map((e) => new Date(e.occurred_at).getTime());
+    const ts = unfilteredEvents.map((e) => new Date(e.occurred_at).getTime());
     return {
       min: new Date(Math.min(...ts)).toISOString(),
       max: new Date(Math.max(...ts)).toISOString(),
     };
-  }, [events]);
+  }, [unfilteredEvents]);
 
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-gray-950 flex flex-col">

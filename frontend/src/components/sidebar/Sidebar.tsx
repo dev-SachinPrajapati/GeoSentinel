@@ -228,17 +228,47 @@ export function Sidebar({ stats, totalEvents }: SidebarProps) {
               Time Range
             </h3>
             <div className="space-y-2">
-              {(['fromDt','toDt'] as const).map((key) => (
-                <div key={key}>
-                  <label className="text-xs text-gray-500 block mb-1">
-                    {key === 'fromDt' ? 'From' : 'To'}
-                  </label>
-                  <input type="datetime-local" value={filters[key] ?? ''}
-                    onChange={(e) => setFilters({ [key]: e.target.value || null })}
-                    className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5
-                               text-xs text-white focus:outline-none focus:border-gray-500" />
-                </div>
-              ))}
+              {(['fromDt','toDt'] as const).map((key) => {
+                // Format helper to convert ISO string into browser-compatible YYYY-MM-DDTHH:mm local time
+                const formatDateTimeLocal = (dateStr: string | null): string => {
+                  if (!dateStr) return '';
+                  const date = new Date(dateStr);
+                  if (isNaN(date.getTime())) return '';
+                  const pad = (num: number) => num.toString().padStart(2, '0');
+                  const year = date.getFullYear();
+                  const month = pad(date.getMonth() + 1);
+                  const day = pad(date.getDate());
+                  const hours = pad(date.getHours());
+                  const minutes = pad(date.getMinutes());
+                  return `${year}-${month}-${day}T${hours}:${minutes}`;
+                };
+
+                const handleDateChange = (val: string) => {
+                  if (!val) {
+                    setFilters({ [key]: null });
+                    return;
+                  }
+                  const date = new Date(val);
+                  if (!isNaN(date.getTime())) {
+                    setFilters({ [key]: date.toISOString() });
+                  }
+                };
+
+                return (
+                  <div key={key}>
+                    <label className="text-xs text-gray-500 block mb-1">
+                      {key === 'fromDt' ? 'From' : 'To'}
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={formatDateTimeLocal(filters[key])}
+                      onChange={(e) => handleDateChange(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5
+                                 text-xs text-white focus:outline-none focus:border-gray-500"
+                    />
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>

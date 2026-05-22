@@ -37,7 +37,63 @@ export function DisasterMap({ events, heatmapPoints = [] }: DisasterMapProps) {
     setSelectedEvent,
     showHeatmap,
     liveEvents,
+    filters,
   } = useAppStore();
+
+  const matchesFilters = useCallback((e: DisasterEvent) => {
+    // 1. Type filter
+    if (filters.types.length > 0 && !filters.types.includes(e.type)) {
+      return false;
+    }
+    // 2. Severity filter
+    if (filters.severities.length > 0 && !filters.severities.includes(e.severity)) {
+      return false;
+    }
+    // 3. Country / Location filter
+    if (filters.country) {
+      const q = filters.country.toLowerCase();
+      const countryMatch = e.country?.toLowerCase().includes(q);
+      const regionMatch = e.region?.toLowerCase().includes(q);
+      const titleMatch = e.title?.toLowerCase().includes(q);
+      const descMatch = e.description?.toLowerCase().includes(q);
+      if (!countryMatch && !regionMatch && !titleMatch && !descMatch) {
+        return false;
+      }
+    }
+    // 4. Date fromDt filter
+    if (filters.fromDt) {
+      if (new Date(e.occurred_at) < new Date(filters.fromDt)) {
+        return false;
+      }
+    }
+    // 5. Date toDt filter
+    if (filters.toDt) {
+      if (new Date(e.occurred_at) > new Date(filters.toDt)) {
+        return false;
+      }
+    }
+    // 6. Proximity / Radius filter
+    if (filters.radiusKm != null && filters.centerLat != null && filters.centerLon != null) {
+      const getDistanceKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371; // Radius of the Earth in km
+        const dLat = ((lat2 - lat1) * Math.PI) / 180;
+        const dLon = ((lon2 - lon1) * Math.PI) / 180;
+        const a =
+          Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos((lat1 * Math.PI) / 180) *
+            Math.cos((lat2 * Math.PI) / 180) *
+            Math.sin(dLon / 2) *
+            Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+      };
+      const dist = getDistanceKm(filters.centerLat, filters.centerLon, e.latitude, e.longitude);
+      if (dist > filters.radiusKm) {
+        return false;
+      }
+    }
+    return true;
+  }, [filters]);
 
   // Merge API events + live WS events (deduplicate by ID).
   // Fix 1: "Map" import shadowed the JS global — renamed import to ReactMap
@@ -45,10 +101,11 @@ export function DisasterMap({ events, heatmapPoints = [] }: DisasterMapProps) {
   const allEvents = useMemo(() => {
     const eventMap = new globalThis.Map<string, DisasterEvent>();
     events.forEach((e) => eventMap.set(e.id, e));
-    // Fix 2: liveEvents may be typed as unknown[] in the store — cast each item
-    (liveEvents as DisasterEvent[]).forEach((e) => eventMap.set(e.id, e));
+    // Filter live events before merging
+    const filteredLive = (liveEvents as DisasterEvent[]).filter(matchesFilters);
+    filteredLive.forEach((e) => eventMap.set(e.id, e));
     return Array.from(eventMap.values());
-  }, [events, liveEvents]);
+  }, [events, liveEvents, matchesFilters]);
 
   const geojson = useMemo(() => eventsToGeoJSON(allEvents), [allEvents]);
 
@@ -133,6 +190,9 @@ export function DisasterMap({ events, heatmapPoints = [] }: DisasterMapProps) {
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       attributionControl={false}
+      renderWorldCopies={false}
+      minZoom={1.5}
+      maxZoom={18}
     >
       <NavigationControl position="top-right" />
       <FullscreenControl position="top-right" />

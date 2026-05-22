@@ -47,18 +47,22 @@ async def list_disasters(
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
 ) -> PaginatedResponse:
-    filters = DisasterFilter(
-        types=types,
-        severities=severities,
-        country=country,
-        center_lat=center_lat,
-        center_lon=center_lon,
-        radius_km=radius_km,
-        from_dt=from_dt,
-        to_dt=to_dt,
-        limit=limit,
-        offset=offset,
-    )
+    try:
+        filters = DisasterFilter(
+            types=types,
+            severities=severities,
+            country=country,
+            center_lat=center_lat,
+            center_lon=center_lon,
+            radius_km=radius_km,
+            from_dt=from_dt,
+            to_dt=to_dt,
+            limit=limit,
+            offset=offset,
+        )
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=exc.errors())
+    
     service = DisasterService(db)
     return await service.list_events(filters)
 
@@ -117,6 +121,17 @@ async def create_disaster(
 ) -> DisasterEventRead:
     service = DisasterService(db)
     event = await service.create_event(data)
+    
+    # Broadcast to websocket
+    try:
+        from websocket.manager import manager
+        payload = DisasterEventRead.model_validate(event).model_dump(mode="json")
+        await manager.broadcast_event(payload)
+        await manager.send_proximity_alerts(payload, float(event.latitude), float(event.longitude))
+    except Exception as ws_err:
+        import logging
+        logging.getLogger(__name__).error(f"Failed to broadcast manually created event: {ws_err}")
+        
     return DisasterEventRead.model_validate(event)
 
 

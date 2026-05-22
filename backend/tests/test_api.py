@@ -6,6 +6,11 @@ import pytest
 import pytest_asyncio
 from datetime import datetime, timezone
 from httpx import AsyncClient, ASGITransport
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from main import app
 from services.ingestion_service import (
@@ -88,38 +93,44 @@ class TestFrpToSeverity:
 class TestWindToSeverity:
     def test_below_threshold_returns_none(self):
         assert _wind_to_severity(10.0) is None
-        assert _wind_to_severity(32.8) is None
+        assert _wind_to_severity(17.1) is None
 
-    def test_cat1(self):
-        assert _wind_to_severity(33.0) == SeverityLevel.MEDIUM
+    def test_low(self):
+        assert _wind_to_severity(17.2) == SeverityLevel.LOW
+        assert _wind_to_severity(32.8) == SeverityLevel.LOW
 
-    def test_cat2(self):
-        assert _wind_to_severity(43.0) == SeverityLevel.HIGH
+    def test_medium(self):
+        assert _wind_to_severity(32.9) == SeverityLevel.MEDIUM
+        assert _wind_to_severity(49.3) == SeverityLevel.MEDIUM
 
-    def test_cat4_5(self):
-        assert _wind_to_severity(58.5) == SeverityLevel.CRITICAL
-        assert _wind_to_severity(70.0) == SeverityLevel.CRITICAL
+    def test_high(self):
+        assert _wind_to_severity(49.4) == SeverityLevel.HIGH
+        assert _wind_to_severity(69.3) == SeverityLevel.HIGH
+
+    def test_critical(self):
+        assert _wind_to_severity(69.4) == SeverityLevel.CRITICAL
+        assert _wind_to_severity(85.0) == SeverityLevel.CRITICAL
 
 
 class TestRainToSeverity:
     def test_below_threshold_returns_none(self):
         assert _rain_to_severity(0.0) is None
-        assert _rain_to_severity(14.9) is None
+        assert _rain_to_severity(4.9) is None
 
     def test_low(self):
-        assert _rain_to_severity(15.0) == SeverityLevel.LOW
-        assert _rain_to_severity(19.9) == SeverityLevel.LOW
+        assert _rain_to_severity(5.0) == SeverityLevel.LOW
+        assert _rain_to_severity(9.9) == SeverityLevel.LOW
 
     def test_medium(self):
-        assert _rain_to_severity(20.0) == SeverityLevel.MEDIUM
-        assert _rain_to_severity(39.9) == SeverityLevel.MEDIUM
+        assert _rain_to_severity(10.0) == SeverityLevel.MEDIUM
+        assert _rain_to_severity(19.9) == SeverityLevel.MEDIUM
 
     def test_high(self):
-        assert _rain_to_severity(40.0) == SeverityLevel.HIGH
-        assert _rain_to_severity(79.9) == SeverityLevel.HIGH
+        assert _rain_to_severity(20.0) == SeverityLevel.HIGH
+        assert _rain_to_severity(49.9) == SeverityLevel.HIGH
 
     def test_critical(self):
-        assert _rain_to_severity(80.0) == SeverityLevel.CRITICAL
+        assert _rain_to_severity(50.0) == SeverityLevel.CRITICAL
         assert _rain_to_severity(200.0) == SeverityLevel.CRITICAL
 
 
@@ -310,30 +321,32 @@ class TestDisastersEndpoint:
 
 # ── WebSocket Tests ───────────────────────────────────────────────────────────
 
+from fastapi.testclient import TestClient
+
 class TestWebSocket:
-    @pytest.mark.asyncio
-    async def test_connect_receives_confirmation(self, client: AsyncClient):
-        async with client.websocket_connect("/ws/disasters") as ws:
-            msg = await ws.receive_json()
-            assert msg["type"] == "connected"
-            assert "client_id" in msg["payload"]
+    def test_connect_receives_confirmation(self):
+        with TestClient(app) as client:
+            with client.websocket_connect("/ws/disasters") as ws:
+                msg = ws.receive_json()
+                assert msg["type"] == "connected"
+                assert "client_id" in msg["payload"]
 
-    @pytest.mark.asyncio
-    async def test_subscribe_message(self, client: AsyncClient):
-        async with client.websocket_connect("/ws/disasters") as ws:
-            await ws.receive_json()  # connected msg
-            await ws.send_json({
-                "type": "subscribe",
-                "payload": {"user_lat": 35.0, "user_lon": 139.0, "alert_radius_km": 200},
-            })
-            msg = await ws.receive_json()
-            assert msg["type"] == "subscribed"
-            assert msg["payload"]["alert_radius_km"] == 200
+    def test_subscribe_message(self):
+        with TestClient(app) as client:
+            with client.websocket_connect("/ws/disasters") as ws:
+                ws.receive_json()  # connected msg
+                ws.send_json({
+                    "type": "subscribe",
+                    "payload": {"user_lat": 35.0, "user_lon": 139.0, "alert_radius_km": 200},
+                })
+                msg = ws.receive_json()
+                assert msg["type"] == "subscribed"
+                assert msg["payload"]["alert_radius_km"] == 200
 
-    @pytest.mark.asyncio
-    async def test_ping_pong(self, client: AsyncClient):
-        async with client.websocket_connect("/ws/disasters") as ws:
-            await ws.receive_json()  # connected
-            await ws.send_json({"type": "ping", "payload": {}})
-            msg = await ws.receive_json()
-            assert msg["type"] == "pong"
+    def test_ping_pong(self):
+        with TestClient(app) as client:
+            with client.websocket_connect("/ws/disasters") as ws:
+                ws.receive_json()  # connected
+                ws.send_json({"type": "ping", "payload": {}})
+                msg = ws.receive_json()
+                assert msg["type"] == "pong"
