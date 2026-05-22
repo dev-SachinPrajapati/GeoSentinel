@@ -166,7 +166,7 @@ export default function DashboardPage() {
       const now = new Date().toISOString();
       return { min: now, max: now };
     }
-    const ts = unfilteredEvents.map((e) => new Date(e.occurred_at).getTime());
+    const ts = unfilteredEvents.map((e:any) => new Date(e.occurred_at).getTime());
     return {
       min: new Date(Math.min(...ts)).toISOString(),
       max: new Date(Math.max(...ts)).toISOString(),
