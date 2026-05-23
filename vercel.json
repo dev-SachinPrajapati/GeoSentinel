@@ -1,13 +1,15 @@
 {
-    "experimentalServices": {
-        "frontend": {
-            "root": "frontend",
-            "routePrefix": "/",
-            "framework": "nextjs"
-        },
-        "backend": {
-            "root": "backend",
-            "routePrefix": "/_/backend"
-        }
+  "experimentalServices": {
+    "frontend": {
+      "root": "frontend",
+      "routePrefix": "/",
+      "framework": "react"
+    },
+    "backend": {
+      "root": "backend",
+      "routePrefix": "/api",
+      "framework": "fastapi",
+      "entrypoint": "main.py"
     }
+  }
 }
