@@ -43,8 +43,8 @@ class DisasterEvent(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     external_id = Column(String(255), unique=True, nullable=True, index=True)
-    type = Column(SAEnum(DisasterType), nullable=False, index=True)
-    severity = Column(SAEnum(SeverityLevel), nullable=False, index=True)
+    type = Column(String(50), nullable=False, index=True)       # ← changed
+    severity = Column(String(20), nullable=False, index=True)   # ← changed
     title = Column(String(500), nullable=False)
     description = Column(String(2000), nullable=True)
 
