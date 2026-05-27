@@ -52,7 +52,18 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
 async def init_db() -> None:
     """Initialize PostGIS extension and tables."""
     import sqlalchemy
+    from pathlib import Path
+
+    schema_path = Path(__file__).parent.parent / "schema.sql"
+
     async with engine.begin() as conn:
-        await conn.execute(sqlalchemy.text("CREATE EXTENSION IF NOT EXISTS postgis;"))
-        await conn.execute(sqlalchemy.text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
-        await conn.run_sync(Base.metadata.create_all)
+        if schema_path.exists():
+            # Run the full schema.sql (creates extensions, tables, indexes, views)
+            sql = schema_path.read_text()
+            await conn.execute(sqlalchemy.text(sql))
+        else:
+            # Fallback for environments without schema.sql
+            await conn.execute(sqlalchemy.text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+            await conn.execute(sqlalchemy.text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
+            await conn.run_sync(Base.metadata.create_all)
+            

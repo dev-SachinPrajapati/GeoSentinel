@@ -57,6 +57,13 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           file: backend/coverage.xml
+          
+      - name: Apply database schema
+        working-directory: backend
+        env:
+          PGPASSWORD: test
+        run: |
+          psql -h localhost -U test -d test_disaster -f schema.sql
 
   # ── Frontend Type Check ───────────────────────────────────────────────────────
   test-frontend:
