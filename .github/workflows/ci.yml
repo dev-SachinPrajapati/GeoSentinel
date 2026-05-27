@@ -51,13 +51,13 @@ jobs:
       
       - name: Install psql client
         run: sudo apt-get install -y postgresql-client
-        
+
       - name: Apply database schema
         working-directory: backend
         env:
           PGPASSWORD: test
         run: |
-          psql -h localhost -U test -d test_disaster -f backend/db/schema.sql
+          psql -h localhost -U test -d test_disaster -f "$GITHUB_WORKSPACE/backend/db/schema.sql"
 
       - name: Run tests
         working-directory: backend
