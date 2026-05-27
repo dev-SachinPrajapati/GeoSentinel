@@ -188,9 +188,6 @@ export default function DashboardPage() {
               <div className="text-center text-gray-300">
                 <div className="text-4xl mb-3 animate-pulse">⏳</div>
                 <p className="text-sm font-medium">Fetching live events…</p>
-                <p className="text-xs text-gray-500 mt-1">
-                  Connecting to {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}
-                </p>
               </div>
             </div>
           )}
