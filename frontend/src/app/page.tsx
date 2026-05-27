@@ -33,7 +33,7 @@ export default function DashboardPage() {
 
   const { data: eventsData, error: eventsError, isLoading: eventsLoading } = useQuery({
     queryKey: ['disasters', filters],
-    queryFn:  async () => {
+    queryFn: async () => {
       const res = await fetchDisasters(filters);
       if (typeof window !== 'undefined') {
         try {
@@ -56,7 +56,7 @@ export default function DashboardPage() {
       return undefined;
     },
     refetchInterval: 30_000,
-    retry:    3,
+    retry: 3,
     staleTime: 15_000,
   });
 
@@ -67,7 +67,7 @@ export default function DashboardPage() {
 
   const { data: unfilteredEventsData } = useQuery({
     queryKey: ['disasters', timelineFilters],
-    queryFn:  async () => {
+    queryFn: async () => {
       const res = await fetchDisasters(timelineFilters);
       if (typeof window !== 'undefined') {
         try {
@@ -90,13 +90,13 @@ export default function DashboardPage() {
       return undefined;
     },
     refetchInterval: 30_000,
-    retry:    3,
+    retry: 3,
     staleTime: 15_000,
   });
 
   const { data: stats } = useQuery({
     queryKey: ['stats'],
-    queryFn:  async () => {
+    queryFn: async () => {
       const res = await fetchStats();
       if (typeof window !== 'undefined') {
         try {
@@ -124,12 +124,12 @@ export default function DashboardPage() {
 
   const heatmapFilters = {
     fromDt: filters.fromDt ?? undefined,
-    toDt:   filters.toDt   ?? undefined,
-    types:  filters.types.length > 0 ? filters.types : undefined,
+    toDt: filters.toDt ?? undefined,
+    types: filters.types.length > 0 ? filters.types : undefined,
   };
   const { data: heatmapData } = useQuery({
     queryKey: ['heatmap', heatmapFilters],
-    queryFn:  async () => {
+    queryFn: async () => {
       const res = await fetchHeatmap(heatmapFilters);
       if (typeof window !== 'undefined') {
         try {
@@ -156,17 +156,21 @@ export default function DashboardPage() {
 
   if (eventsError) console.error('[page] events error:', eventsError);
 
-  const events        = eventsData?.data  ?? [];
-  const totalEvents   = eventsData?.total ?? 0;
+  const events = eventsData?.data ?? [];
+  const totalEvents = eventsData?.total ?? 0;
   const heatmapPoints = heatmapData?.data ?? [];
-  const unfilteredEvents = unfilteredEventsData?.data ?? [];
+  // const unfilteredEvents = unfilteredEventsData?.data ?? [];
+  const unfilteredEvents = useMemo(
+    () => unfilteredEventsData?.data ?? [],
+    [unfilteredEventsData]
+  );
 
   const timelineDates = useMemo(() => {
     if (!unfilteredEvents.length) {
       const now = new Date().toISOString();
       return { min: now, max: now };
     }
-    const ts = unfilteredEvents.map((e:any) => new Date(e.occurred_at).getTime());
+    const ts = unfilteredEvents.map((e: any) => new Date(e.occurred_at).getTime());
     return {
       min: new Date(Math.min(...ts)).toISOString(),
       max: new Date(Math.max(...ts)).toISOString(),

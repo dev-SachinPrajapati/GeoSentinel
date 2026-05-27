@@ -296,7 +296,7 @@ export function AuthModal({ onClose }: Props) {
               </form>
 
               <div className="text-center pt-1">
-                <p className="text-gray-600 text-xs mb-1">Didn't receive a code?</p>
+                <p className="text-gray-600 text-xs mb-1">Didn&apos;t receive a code?</p>
                 <button onClick={onResend} disabled={busy}
                   className="text-blue-400 hover:text-blue-300 text-xs underline
                              underline-offset-2 disabled:opacity-50 transition-colors">
