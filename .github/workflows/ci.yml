@@ -44,6 +44,11 @@ jobs:
         working-directory: backend
         run: pip install -r requirements.txt pytest-cov
 
+      - name: Debug — list db directory
+        run: |
+          echo "Current dir: $(pwd)"
+          ls -la backend/db/
+          
       - name: Apply database schema
         working-directory: backend
         env:
