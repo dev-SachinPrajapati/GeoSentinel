@@ -54,7 +54,7 @@ async def init_db() -> None:
     import sqlalchemy
     from pathlib import Path
 
-    schema_path = Path(__file__).parent.parent / "schema.sql"
+    schema_path = Path(__file__).parent / "schema.sql"
 
     async with engine.begin() as conn:
         if schema_path.exists():

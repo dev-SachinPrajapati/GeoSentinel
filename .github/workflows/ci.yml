@@ -49,8 +49,8 @@ jobs:
         env:
           PGPASSWORD: test
         run: |
-          psql -h localhost -U test -d test_disaster -f schema.sql
-          
+          psql -h localhost -U test -d test_disaster -f backend/db/schema.sql
+
       - name: Run tests
         working-directory: backend
         env:
