@@ -61,7 +61,17 @@ async def list_disasters(
             offset=offset,
         )
     except ValidationError as exc:
-        raise HTTPException(status_code=422, detail=exc.errors())
+        # Pydantic v2 exc.errors() may contain non-JSON-serializable objects
+        # in ctx (e.g. raw ValueError).  Sanitize before passing to HTTPException.
+        safe_errors = []
+        for err in exc.errors():
+            clean = {k: v for k, v in err.items() if k != "ctx"}
+            if "ctx" in err:
+                clean["ctx"] = {
+                    ck: str(cv) for ck, cv in err["ctx"].items()
+                }
+            safe_errors.append(clean)
+        raise HTTPException(status_code=422, detail=safe_errors)
     
     service = DisasterService(db)
     return await service.list_events(filters)

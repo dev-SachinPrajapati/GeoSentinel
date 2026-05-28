@@ -69,10 +69,12 @@ CREATE INDEX IF NOT EXISTS idx_disaster_occurred_at
 CREATE INDEX IF NOT EXISTS idx_disaster_country
     ON disaster_events (country);
 
--- Partial index: only active (non-expired) events for live view
-CREATE INDEX IF NOT EXISTS idx_disaster_active
-    ON disaster_events (occurred_at DESC)
-    WHERE expires_at IS NULL OR expires_at > NOW();
+-- Index on expires_at to speed up active-event filtering
+-- NOTE: Cannot use `NOW()` in a partial-index predicate because it is STABLE,
+--       not IMMUTABLE.  A plain B-tree on (expires_at) still lets the planner
+--       combine it with idx_disaster_occurred_at for "active events" queries.
+CREATE INDEX IF NOT EXISTS idx_disaster_expires_at
+    ON disaster_events (expires_at);
 
 -- JSONB index for metadata queries (e.g., filter by magnitude)
 CREATE INDEX IF NOT EXISTS idx_disaster_metadata
