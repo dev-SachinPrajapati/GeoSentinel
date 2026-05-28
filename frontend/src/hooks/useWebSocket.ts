@@ -2,21 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { DisasterEvent, WSMessage, WSSubscribePayload } from '@/types';
 import { useAppStore } from '@/store';
 
-const getWsUrl = () => {
-  if (process.env.NEXT_PUBLIC_WS_URL) {
-    return process.env.NEXT_PUBLIC_WS_URL.replace(/\/$/, '');
-  }
-  if (typeof window === 'undefined') {
-    return 'ws://localhost:8000';
-  }
-  if (window.location.hostname === 'localhost') {
-    return 'ws://localhost:8000';
-  }
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}`;
-};
-
-const WS_URL = getWsUrl();
+const WS_URL = (process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8000').replace(/\/$/, '');
 const RECONNECT_BASE_DELAY   = 1_000;
 const RECONNECT_MAX_DELAY    = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
