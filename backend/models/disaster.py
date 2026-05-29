@@ -4,7 +4,7 @@ from sqlalchemy import (
     Column, String, Float, DateTime, JSON, Index, Text,
     Enum as SAEnum, func
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSONB
 from db.database import Base
 import enum
 
@@ -60,7 +60,7 @@ class DisasterEvent(Base):
     expires_at = Column(DateTime(timezone=True), nullable=True)
 
     # Renamed from 'metadata' — reserved by SQLAlchemy DeclarativeBase
-    event_metadata = Column("metadata", JSON, default={})
+    event_metadata = Column("metadata", JSONB, default={})
 
     source = Column(String(100), nullable=False, default="manual")
     created_at = Column(DateTime(timezone=True), server_default=func.now())

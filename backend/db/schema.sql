@@ -76,9 +76,24 @@ CREATE INDEX IF NOT EXISTS idx_disaster_country
 CREATE INDEX IF NOT EXISTS idx_disaster_expires_at
     ON disaster_events (expires_at);
 
+-- Ensure metadata column is JSONB (SQLAlchemy ORM may have created it as json)
+-- This is safe to run even if the column is already JSONB.
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'disaster_events'
+          AND column_name = 'metadata'
+          AND data_type = 'json'
+    ) THEN
+        ALTER TABLE disaster_events
+            ALTER COLUMN metadata TYPE JSONB USING metadata::JSONB;
+    END IF;
+END $$;
+
 -- JSONB index for metadata queries (e.g., filter by magnitude)
 CREATE INDEX IF NOT EXISTS idx_disaster_metadata
-    ON disaster_events USING GIN (metadata);
+    ON disaster_events USING GIN (metadata jsonb_ops);
 
 -- ── Views ─────────────────────────────────────────────────────────────────────
 
