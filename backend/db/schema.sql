@@ -7,6 +7,24 @@
 CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- ── Drop stale enum types left over from previous ORM-managed deployments ─────
+-- SQLAlchemy's SAEnum creates named PostgreSQL enums ("disastertype",
+-- "severitylevel"). The current schema uses VARCHAR instead.
+-- If those enums still exist and own the columns, we must drop the table
+-- before we can drop the type — CASCADE handles dependent views/indexes too.
+-- disaster_events only contains seed + ingested data (both rebuilt on startup),
+-- so dropping it here is safe.
+DO $$
+BEGIN
+    IF EXISTS (SELECT 1 FROM pg_type WHERE typname = 'disastertype')
+    OR EXISTS (SELECT 1 FROM pg_type WHERE typname = 'severitylevel')
+    THEN
+        DROP TABLE IF EXISTS disaster_events CASCADE;
+        DROP TYPE  IF EXISTS disastertype;
+        DROP TYPE  IF EXISTS severitylevel;
+    END IF;
+END $$;
+
 -- ── Users ─────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS users (
     id                      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -144,22 +162,35 @@ WHERE e.id = '<disaster_id>'
 */
 
 -- ── Seed Data ─────────────────────────────────────────────────────────────────
--- Add sample events for testing
-INSERT INTO disaster_events (type, severity, title, latitude, longitude, location, occurred_at, source, metadata)
+-- Add sample events for testing.
+-- explicit external_id values are required for ON CONFLICT deduplication —
+-- NULL values never match each other in a UNIQUE constraint, so without them
+-- every deploy would re-insert duplicates (or fail if the column is NOT NULL).
+INSERT INTO disaster_events (external_id, type, severity, title, latitude, longitude, location, occurred_at, source, metadata)
 VALUES
-    ('earthquake', 'high',     'M6.2 Earthquake - Japan',     35.689,  139.692,
-     ST_SetSRID(ST_MakePoint(139.692, 35.689), 4326)::geography, NOW() - INTERVAL '2 hours', 'seed',
-     '{"magnitude": 6.2, "depth_km": 35}'),
-    ('flood',      'critical', 'Flash Flood - Bangladesh',    23.685,   90.356,
-     ST_SetSRID(ST_MakePoint(90.356, 23.685), 4326)::geography,  NOW() - INTERVAL '4 hours', 'seed',
-     '{"water_level_m": 4.5, "affected_area_km2": 1200}'),
-    ('fire',       'high',     'Wildfire - California, USA',  36.778, -119.418,
-     ST_SetSRID(ST_MakePoint(-119.418, 36.778), 4326)::geography, NOW() - INTERVAL '1 hour', 'seed',
-     '{"area_hectares": 8500, "containment_pct": 23}'),
-    ('earthquake', 'medium',   'M4.8 Earthquake - Greece',   39.074,   21.824,
-     ST_SetSRID(ST_MakePoint(21.824, 39.074), 4326)::geography,  NOW() - INTERVAL '6 hours', 'seed',
-     '{"magnitude": 4.8, "depth_km": 12}'),
-    ('flood',      'high',     'River Flooding - Philippines', 12.879,  121.774,
-     ST_SetSRID(ST_MakePoint(121.774, 12.879), 4326)::geography, NOW() - INTERVAL '3 hours', 'seed',
-     '{"water_level_m": 2.8, "evacuation_order": true}')
+    ('seed-earthquake-japan',
+     'earthquake', 'high',     'M6.2 Earthquake - Japan',      35.689,  139.692,
+     ST_SetSRID(ST_MakePoint(139.692,  35.689), 4326)::geography,
+     NOW() - INTERVAL '2 hours',  'seed', '{"magnitude": 6.2, "depth_km": 35}'),
+
+    ('seed-flood-bangladesh',
+     'flood',      'critical', 'Flash Flood - Bangladesh',     23.685,   90.356,
+     ST_SetSRID(ST_MakePoint( 90.356,  23.685), 4326)::geography,
+     NOW() - INTERVAL '4 hours',  'seed', '{"water_level_m": 4.5, "affected_area_km2": 1200}'),
+
+    ('seed-fire-california',
+     'fire',       'high',     'Wildfire - California, USA',   36.778, -119.418,
+     ST_SetSRID(ST_MakePoint(-119.418, 36.778), 4326)::geography,
+     NOW() - INTERVAL '1 hour',   'seed', '{"area_hectares": 8500, "containment_pct": 23}'),
+
+    ('seed-earthquake-greece',
+     'earthquake', 'medium',   'M4.8 Earthquake - Greece',    39.074,   21.824,
+     ST_SetSRID(ST_MakePoint( 21.824,  39.074), 4326)::geography,
+     NOW() - INTERVAL '6 hours',  'seed', '{"magnitude": 4.8, "depth_km": 12}'),
+
+    ('seed-flood-philippines',
+     'flood',      'high',     'River Flooding - Philippines', 12.879,  121.774,
+     ST_SetSRID(ST_MakePoint(121.774,  12.879), 4326)::geography,
+     NOW() - INTERVAL '3 hours',  'seed', '{"water_level_m": 2.8, "evacuation_order": true}')
+
 ON CONFLICT (external_id) DO NOTHING;
