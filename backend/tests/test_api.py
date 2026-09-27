@@ -10,7 +10,7 @@ from httpx import AsyncClient, ASGITransport
 from main import app
 from services.ingestion_service import (
     _magnitude_to_severity,
-    _extract_country,
+    # _extract_country,
     _frp_to_severity,
     _wind_to_severity,
     _rain_to_severity,

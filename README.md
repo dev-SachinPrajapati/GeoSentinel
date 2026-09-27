@@ -169,6 +169,7 @@ cd disaster-monitor
 
 # Start PostGIS + backend
 docker-compose up -d
+docker compose up
 
 # Backend runs at http://localhost:8000
 # API docs at http://localhost:8000/docs

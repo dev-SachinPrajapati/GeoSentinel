@@ -8,11 +8,11 @@ services:
       POSTGRES_PASSWORD: disaster_secret
       POSTGRES_DB: disaster_monitor
     ports:
-      - "5432:5432"
+      - "5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U disaster"]
+      test: ["CMD-SHELL", "pg_isready -U disaster -d disaster_monitor -h 127.0.0.1"]
       interval: 10s
       timeout: 5s
       retries: 5
